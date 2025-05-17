@@ -1,12 +1,12 @@
 /*
-The model_based_planning_context.cpp file implements the core logic for managing motion planning contexts in MoveIt! 
-using the OMPL (Open Motion Planning Library) backend. It acts as the bridge between high-level motion planning requests 
-(such as start/goal states, constraints, and optimization objectives) and the underlying OMPL planners. The class defined 
-here is responsible for configuring the planning problem, setting up constraints and optimization objectives, handling 
-state sampling and validity checking, running the planner (possibly in parallel), and extracting the resulting solution 
-paths as robot trajectories. This file is essential for enabling flexible, constraint-aware, and optimized motion planning 
-for robotic arms within the MoveIt! framework, supporting advanced features like custom constraints, benchmarking, and 
-integration with neural planners like MPNet.
+The file implements the core logic for managing motion planning contexts in MoveIt! using the OMPL (Open Motion Planning 
+Library) backend. It acts as the bridge between high-level motion planning requests (such as start/goal states, constraints, 
+and optimization objectives) and the underlying OMPL planners. The class defined here is responsible for configuring the 
+planning problem, setting up constraints and optimization objectives, handling state sampling and validity checking, 
+running the planner (possibly in parallel), and extracting the resulting solution paths as robot trajectories. This file 
+is essential for enabling flexible, constraint-aware, and optimized motion planning for robotic arms within the MoveIt! 
+framework, supporting advanced features like custom constraints, benchmarking, and integration with neural planners like 
+MPNet.
 */
 #include <boost/algorithm/string/trim.hpp>
 

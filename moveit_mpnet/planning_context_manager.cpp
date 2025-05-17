@@ -50,6 +50,8 @@ modular motion planning in complex robotic systems using MoveIt! and OMPL.
 
 namespace ompl_interface
 {
+// This inner class safely stores the last planning context used, protected by a mutex,
+// so other components can retrieve the most recent context for debugging or analysis.
 class PlanningContextManager::LastPlanningContext
 {
 public:
@@ -77,6 +79,8 @@ private:
   boost::mutex lock_;
 };
 
+// This struct caches planning contexts keyed by (configuration name, state space factory),
+// allowing reuse of contexts when configurations repeat, improving performance.
 struct PlanningContextManager::CachedContexts
 {
   std::map<std::pair<std::string, std::string>, std::vector<ModelBasedPlanningContextPtr> > contexts_;
@@ -110,6 +114,8 @@ namespace
 {
 using namespace ompl_interface;
 
+// Template helper: allocates, configures, and sets up a new planner of type T.
+// Used by registerDefaultPlanners to instantiate planners by name.
 template <typename T>
 static ompl::base::PlannerPtr allocatePlanner(const ob::SpaceInformationPtr& si, const std::string& new_name,
                                               const ModelBasedPlanningContextSpecification& spec)
@@ -123,6 +129,8 @@ static ompl::base::PlannerPtr allocatePlanner(const ob::SpaceInformationPtr& si,
 }
 }
 
+// Returns the planner allocator function for a given planner name,
+// or reports an error if the planner is unknown.
 ompl_interface::ConfiguredPlannerAllocator
 ompl_interface::PlanningContextManager::plannerSelector(const std::string& planner) const
 {
@@ -136,6 +144,8 @@ ompl_interface::PlanningContextManager::plannerSelector(const std::string& plann
   }
 }
 
+// Registers the default set of OMPL geometric planners (RRT, PRM, EST, etc.)
+// and the neural-network-based MPNet planner under their configuration keys.
 void ompl_interface::PlanningContextManager::registerDefaultPlanners()
 {
   registerPlannerAllocator("geometric::RRT", boost::bind(&allocatePlanner<og::RRT>, _1, _2, _3));
@@ -166,23 +176,28 @@ void ompl_interface::PlanningContextManager::registerDefaultPlanners()
   registerPlannerAllocator("geometric::MPNet", boost::bind(&allocatePlanner<og::MPNet>, _1, _2, _3));
 }
 
+// Registers factories for joint-space and pose-space planning state representations.
 void ompl_interface::PlanningContextManager::registerDefaultStateSpaces()
 {
   registerStateSpaceFactory(ModelBasedStateSpaceFactoryPtr(new JointModelStateSpaceFactory()));
   registerStateSpaceFactory(ModelBasedStateSpaceFactoryPtr(new PoseModelStateSpaceFactory()));
 }
 
+// Returns a function to select planners by name using plannerSelector method.
 ompl_interface::ConfiguredPlannerSelector ompl_interface::PlanningContextManager::getPlannerSelector() const
 {
   return boost::bind(&PlanningContextManager::plannerSelector, this, _1);
 }
 
+// Stores the mapping of planning group names to their planner configurations.
 void ompl_interface::PlanningContextManager::setPlannerConfigurations(
     const planning_interface::PlannerConfigurationMap& pconfig)
 {
   planner_configs_ = pconfig;
 }
 
+// Retrieves (or constructs) a planning context for the given configuration name and
+// explicit state space factory type, using a cache if available.
 ompl_interface::ModelBasedPlanningContextPtr ompl_interface::PlanningContextManager::getPlanningContext(
     const std::string& config, const std::string& factory_type) const
 {
@@ -201,6 +216,8 @@ ompl_interface::ModelBasedPlanningContextPtr ompl_interface::PlanningContextMana
   }
 }
 
+// Core logic to cache, create, and configure a planning context based on detailed settings:
+// applies thread limits, sampling attempts, solution segment length, and waypoint counts.
 ompl_interface::ModelBasedPlanningContextPtr ompl_interface::PlanningContextManager::getPlanningContext(
     const planning_interface::PlannerConfigurationSettings& config,
     const StateSpaceFactoryTypeSelector& factory_selector, const moveit_msgs::MotionPlanRequest& req) const
@@ -281,6 +298,7 @@ ompl_interface::ModelBasedPlanningContextPtr ompl_interface::PlanningContextMana
   return context;
 }
 
+// Selects the state space factory by explicit factory type string.
 const ompl_interface::ModelBasedStateSpaceFactoryPtr& ompl_interface::PlanningContextManager::getStateSpaceFactory1(
     const std::string& /* dummy */, const std::string& factory_type) const
 {
@@ -296,6 +314,7 @@ const ompl_interface::ModelBasedStateSpaceFactoryPtr& ompl_interface::PlanningCo
   }
 }
 
+// Selects the best state space factory for the problem by querying each factory's ability to represent the problem.
 const ompl_interface::ModelBasedStateSpaceFactoryPtr& ompl_interface::PlanningContextManager::getStateSpaceFactory2(
     const std::string& group, const moveit_msgs::MotionPlanRequest& req) const
 {
@@ -328,6 +347,8 @@ const ompl_interface::ModelBasedStateSpaceFactoryPtr& ompl_interface::PlanningCo
   }
 }
 
+// Entry point for planning via MoveIt!: sets up the context with the planning scene and request,
+// applies constraints/goals, and returns the configured context ready to solve.
 ompl_interface::ModelBasedPlanningContextPtr
 ompl_interface::PlanningContextManager::getPlanningContext(const planning_scene::PlanningSceneConstPtr& planning_scene,
                                                            const moveit_msgs::MotionPlanRequest& req,
@@ -424,6 +445,7 @@ ompl_interface::PlanningContextManager::getPlanningContext(const planning_scene:
   return context;
 }
 
+// Returns the last planning context used by this manager (for debugging or introspection).
 ompl_interface::ModelBasedPlanningContextPtr ompl_interface::PlanningContextManager::getLastPlanningContext() const
 {
   return last_planning_context_->getContext();

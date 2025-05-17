@@ -1,3 +1,14 @@
+'''
+The file is designed to automate the process of generating and evaluating motion planning 
+data for a robotic arm (specifically, a Franka Emika arm) in simulated environments using ROS and MoveIt!. It loads 
+predefined environments and goal configurations, randomly places obstacles, and repeatedly attempts to plan collision-free 
+paths from a neutral starting position to various goal joint configurations. For each planning attempt, it records the 
+resulting path, its cost (measured as the Euclidean distance in joint space), and the time taken to compute the plan. 
+The script saves all this data for later analysis, enabling researchers to assess the performance and robustness of the 
+motion planning algorithm under a variety of randomized scenarios. This process is essential for benchmarking planners and 
+generating datasets for machine learning or further robotics research.
+'''
+
 import numpy as np
 from numpy import matlib
 import rospy
@@ -291,13 +302,3 @@ def main():
 if __name__ == '__main__':
     main()
 
-'''
-The motion_planning_data_gen.py script is designed to automate the process of generating and evaluating motion planning 
-data for a robotic arm (specifically, a Franka Emika arm) in simulated environments using ROS and MoveIt!. It loads 
-predefined environments and goal configurations, randomly places obstacles, and repeatedly attempts to plan collision-free 
-paths from a neutral starting position to various goal joint configurations. For each planning attempt, it records the 
-resulting path, its cost (measured as the Euclidean distance in joint space), and the time taken to compute the plan. 
-The script saves all this data for later analysis, enabling researchers to assess the performance and robustness of the 
-motion planning algorithm under a variety of randomized scenarios. This process is essential for benchmarking planners and 
-generating datasets for machine learning or further robotics research.
-'''

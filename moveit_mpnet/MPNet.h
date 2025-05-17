@@ -9,8 +9,6 @@ advanced features like tree pruning, informed sampling, and batch-ordered sampli
 high-performance, learning-based motion planning in complex robotic environments.
 
 */
-// #ifndef OMPL_GEOMETRIC_PLANNERS_RRT_RRTSTAR_
-// #define OMPL_GEOMETRIC_PLANNERS_RRT_RRTSTAR_
 
 #ifndef OMPL_GEOMETRIC_PLANNERS_MPNET_MPNET_
 #define OMPL_GEOMETRIC_PLANNERS_MPNET_MPNET_
