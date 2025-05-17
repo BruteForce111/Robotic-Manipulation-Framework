@@ -1,4 +1,13 @@
-
+/*
+The model_based_planning_context.cpp file implements the core logic for managing motion planning contexts in MoveIt! 
+using the OMPL (Open Motion Planning Library) backend. It acts as the bridge between high-level motion planning requests 
+(such as start/goal states, constraints, and optimization objectives) and the underlying OMPL planners. The class defined 
+here is responsible for configuring the planning problem, setting up constraints and optimization objectives, handling 
+state sampling and validity checking, running the planner (possibly in parallel), and extracting the resulting solution 
+paths as robot trajectories. This file is essential for enabling flexible, constraint-aware, and optimized motion planning 
+for robotic arms within the MoveIt! framework, supporting advanced features like custom constraints, benchmarking, and 
+integration with neural planners like MPNet.
+*/
 #include <boost/algorithm/string/trim.hpp>
 
 #include <moveit/ompl_interface/model_based_planning_context.h>
@@ -25,6 +34,8 @@
 #include "ompl/base/objectives/StateCostIntegralObjective.h"
 #include "ompl/base/objectives/MaximizeMinClearanceObjective.h"
 
+// Main class for managing a planning context in MoveIt! using OMPL
+// Handles configuration, constraints, optimization objectives, and solution extraction
 ompl_interface::ModelBasedPlanningContext::ModelBasedPlanningContext(const std::string& name,
                                                                      const ModelBasedPlanningContextSpecification& spec)
   : planning_interface::PlanningContext(name, spec.state_space_->getJointModelGroup()->getName())
@@ -45,12 +56,14 @@ ompl_interface::ModelBasedPlanningContext::ModelBasedPlanningContext(const std::
   , use_state_validity_cache_(true)
   , simplify_solutions_(true)
 {
+  // Initialize the robot state and set up the OMPL state space
   complete_initial_robot_state_.update();
   ompl_simple_setup_->getStateSpace()->computeSignature(space_signature_);
   ompl_simple_setup_->getStateSpace()->setStateSamplerAllocator(
       boost::bind(&ModelBasedPlanningContext::allocPathConstrainedSampler, this, _1));
 }
 
+// Set the projection evaluator for the OMPL state space (used for planning heuristics)
 void ompl_interface::ModelBasedPlanningContext::setProjectionEvaluator(const std::string& peval)
 {
   if (!spec_.state_space_)
@@ -63,9 +76,11 @@ void ompl_interface::ModelBasedPlanningContext::setProjectionEvaluator(const std
     spec_.state_space_->registerDefaultProjection(pe);
 }
 
+// Helper to get a projection evaluator based on a string description (e.g., link/joint projections)
 ompl::base::ProjectionEvaluatorPtr
 ompl_interface::ModelBasedPlanningContext::getProjectionEvaluator(const std::string& peval) const
 {
+  // Handle projections based on link pose or joint values
   if (peval.find_first_of("link(") == 0 && peval[peval.length() - 1] == ')')
   {
     std::string link_name = peval.substr(5, peval.length() - 6);
@@ -118,6 +133,7 @@ ompl_interface::ModelBasedPlanningContext::getProjectionEvaluator(const std::str
   return ob::ProjectionEvaluatorPtr();
 }
 
+// Allocates a state sampler that respects path constraints (if any)
 ompl::base::StateSamplerPtr
 ompl_interface::ModelBasedPlanningContext::allocPathConstrainedSampler(const ompl::base::StateSpace* ss) const
 {
@@ -171,6 +187,7 @@ ompl_interface::ModelBasedPlanningContext::allocPathConstrainedSampler(const omp
   return ss->allocDefaultStateSampler();
 }
 
+// Configures the planning context: sets start state, validity checker, constraints, and optimization objectives
 void ompl_interface::ModelBasedPlanningContext::configure()
 {
   // convert the input state to the corresponding OMPL state
@@ -179,6 +196,7 @@ void ompl_interface::ModelBasedPlanningContext::configure()
   ompl_simple_setup_->setStartState(ompl_start_state);
   ompl_simple_setup_->setStateValidityChecker(ob::StateValidityCheckerPtr(new StateValidityChecker(this)));
 
+  // If path constraints are present, set up interpolation accordingly
   if (path_constraints_ && spec_.constraints_library_)
   {
     const ConstraintApproximationPtr& ca =
@@ -195,6 +213,7 @@ void ompl_interface::ModelBasedPlanningContext::configure()
     ompl_simple_setup_->setup();
 }
 
+// Applies configuration parameters (e.g., optimization objective, planner type) to the context
 void ompl_interface::ModelBasedPlanningContext::useConfig()
 {
   const std::map<std::string, std::string>& config = spec_.config_;
@@ -202,32 +221,25 @@ void ompl_interface::ModelBasedPlanningContext::useConfig()
     return;
   std::map<std::string, std::string> cfg = config;
 
-  // set the distance between waypoints when interpolating and collision checking.
+  // Set the distance between waypoints for interpolation/collision checking
   std::map<std::string, std::string>::iterator it = cfg.find("longest_valid_segment_fraction");
-  // If one of the two variables is set.
   if (it != cfg.end() || max_solution_segment_length_ != 0.0)
   {
-    // clang-format off
     double longest_valid_segment_fraction_config = (it != cfg.end())
-      ? moveit::core::toDouble(it->second)  // value from config file if there
-      : 0.01;  // default value in OMPL.
+      ? moveit::core::toDouble(it->second)
+      : 0.01;
     double longest_valid_segment_fraction_final = longest_valid_segment_fraction_config;
     if (max_solution_segment_length_ > 0.0)
     {
-      // If this parameter is specified too, take the most conservative of the two variables,
-      // i.e. the one that uses the shorter segment length.
       longest_valid_segment_fraction_final = std::min(
           longest_valid_segment_fraction_config,
           max_solution_segment_length_ / spec_.state_space_->getMaximumExtent()
       );
     }
-    // clang-format on
-
-    // convert to string using no locale
     cfg["longest_valid_segment_fraction"] = moveit::core::toString(longest_valid_segment_fraction_final);
   }
 
-  // set the projection evaluator
+  // Set the projection evaluator if specified
   it = cfg.find("projection_evaluator");
   if (it != cfg.end())
   {
@@ -238,6 +250,7 @@ void ompl_interface::ModelBasedPlanningContext::useConfig()
   if (cfg.empty())
     return;
 
+  // Set the optimization objective (e.g., path length, mechanical work)
   std::string optimizer;
   ompl::base::OptimizationObjectivePtr objective;
   it = cfg.find("optimization_objective");
@@ -280,7 +293,7 @@ void ompl_interface::ModelBasedPlanningContext::useConfig()
 
   ompl_simple_setup_->setOptimizationObjective(objective);
 
-  // remove the 'type' parameter; the rest are parameters for the planner itself
+  // Set the planner type if specified
   it = cfg.find("type");
   if (it == cfg.end())
   {
@@ -300,13 +313,13 @@ void ompl_interface::ModelBasedPlanningContext::useConfig()
                    name_.c_str(), type.c_str());
   }
 
-  // call the setParams() after setup(), so we know what the params are
+  // Apply any remaining parameters to the OMPL space information
   ompl_simple_setup_->getSpaceInformation()->setup();
   ompl_simple_setup_->getSpaceInformation()->params().setParams(cfg, true);
-  // call setup() again for possibly new param values
   ompl_simple_setup_->getSpaceInformation()->setup();
 }
 
+// Set the planning volume (workspace bounds) for the context
 void ompl_interface::ModelBasedPlanningContext::setPlanningVolume(const moveit_msgs::WorkspaceParameters& wparams)
 {
   if (wparams.min_corner.x == wparams.max_corner.x && wparams.min_corner.x == 0.0 &&
@@ -324,40 +337,38 @@ void ompl_interface::ModelBasedPlanningContext::setPlanningVolume(const moveit_m
                                         wparams.max_corner.y, wparams.min_corner.z, wparams.max_corner.z);
 }
 
+// Optionally simplify the solution path after planning
 void ompl_interface::ModelBasedPlanningContext::simplifySolution(double timeout)
 {
   ompl_simple_setup_->simplifySolution(timeout);
   last_simplify_time_ = ompl_simple_setup_->getLastSimplificationTime();
 }
 
+// Optionally interpolate the solution path to add more waypoints
 void ompl_interface::ModelBasedPlanningContext::interpolateSolution()
 {
   if (ompl_simple_setup_->haveSolutionPath())
   {
     og::PathGeometric& pg = ompl_simple_setup_->getSolutionPath();
-
     // Find the number of states that will be in the interpolated solution.
-    // This is what interpolate() does internally.
     unsigned int eventual_states = 1;
     std::vector<ompl::base::State*> states = pg.getStates();
     for (size_t i = 0; i < states.size() - 1; i++)
     {
       eventual_states += ompl_simple_setup_->getStateSpace()->validSegmentCount(states[i], states[i + 1]);
     }
-
     if (eventual_states < minimum_waypoint_count_)
     {
-      // If that's not enough states, use the minimum amount instead.
       pg.interpolate(minimum_waypoint_count_);
     }
     else
     {
-      // Interpolate the path to have as the exact states that are checked when validating motions.
       pg.interpolate();
     }
   }
 }
 
+// Convert an OMPL geometric path to a MoveIt! robot trajectory
 void ompl_interface::ModelBasedPlanningContext::convertPath(const ompl::geometric::PathGeometric& pg,
                                                             robot_trajectory::RobotTrajectory& traj) const
 {
@@ -369,6 +380,7 @@ void ompl_interface::ModelBasedPlanningContext::convertPath(const ompl::geometri
   }
 }
 
+// Extract the solution path from OMPL and store it as a MoveIt! trajectory
 bool ompl_interface::ModelBasedPlanningContext::getSolutionPath(robot_trajectory::RobotTrajectory& traj) const
 {
   traj.clear();
@@ -378,16 +390,16 @@ bool ompl_interface::ModelBasedPlanningContext::getSolutionPath(robot_trajectory
   return true;
 }
 
+// Enable or disable verbose state validity checking (for debugging)
 void ompl_interface::ModelBasedPlanningContext::setVerboseStateValidityChecks(bool flag)
 {
   if (ompl_simple_setup_->getStateValidityChecker())
     static_cast<StateValidityChecker*>(ompl_simple_setup_->getStateValidityChecker().get())->setVerbose(flag);
 }
 
+// Construct the goal for OMPL planning, based on MoveIt! goal constraints
 ompl::base::GoalPtr ompl_interface::ModelBasedPlanningContext::constructGoal()
 {
-  // ******************* set up the goal representation, based on goal constraints
-
   std::vector<ob::GoalPtr> goals;
   for (std::size_t i = 0; i < goal_constraints_.size(); ++i)
   {
@@ -401,15 +413,14 @@ ompl::base::GoalPtr ompl_interface::ModelBasedPlanningContext::constructGoal()
       goals.push_back(g);
     }
   }
-
   if (!goals.empty())
     return goals.size() == 1 ? goals[0] : ompl::base::GoalPtr(new GoalSampleableRegionMux(goals));
   else
     ROS_ERROR_NAMED("model_based_planning_context", "Unable to construct goal representation");
-
   return ob::GoalPtr();
 }
 
+// Set the initial robot state for planning
 void ompl_interface::ModelBasedPlanningContext::setCompleteInitialState(
     const robot_state::RobotState& complete_initial_robot_state)
 {
@@ -417,6 +428,7 @@ void ompl_interface::ModelBasedPlanningContext::setCompleteInitialState(
   complete_initial_robot_state_.update();
 }
 
+// Clear the planning context (reset OMPL and constraints)
 void ompl_interface::ModelBasedPlanningContext::clear()
 {
   ompl_simple_setup_->clear();
@@ -428,22 +440,21 @@ void ompl_interface::ModelBasedPlanningContext::clear()
   getOMPLStateSpace()->setInterpolationFunction(InterpolationFunction());
 }
 
+// Set path constraints for planning
 bool ompl_interface::ModelBasedPlanningContext::setPathConstraints(const moveit_msgs::Constraints& path_constraints,
                                                                    moveit_msgs::MoveItErrorCodes* error)
 {
-  // ******************* set the path constraints to use
   path_constraints_.reset(new kinematic_constraints::KinematicConstraintSet(getRobotModel()));
   path_constraints_->add(path_constraints, getPlanningScene()->getTransforms());
   path_constraints_msg_ = path_constraints;
-
   return true;
 }
 
+// Set goal constraints for planning
 bool ompl_interface::ModelBasedPlanningContext::setGoalConstraints(
     const std::vector<moveit_msgs::Constraints>& goal_constraints, const moveit_msgs::Constraints& path_constraints,
     moveit_msgs::MoveItErrorCodes* error)
 {
-  // ******************* check if the input is correct
   goal_constraints_.clear();
   for (std::size_t i = 0; i < goal_constraints.size(); ++i)
   {
@@ -454,7 +465,6 @@ bool ompl_interface::ModelBasedPlanningContext::setGoalConstraints(
     if (!kset->empty())
       goal_constraints_.push_back(kset);
   }
-
   if (goal_constraints_.empty())
   {
     ROS_WARN_NAMED("model_based_planning_context", "%s: No goal constraints specified. There is no problem to solve.",
@@ -463,7 +473,6 @@ bool ompl_interface::ModelBasedPlanningContext::setGoalConstraints(
       error->val = moveit_msgs::MoveItErrorCodes::INVALID_GOAL_CONSTRAINTS;
     return false;
   }
-
   ob::GoalPtr goal = constructGoal();
   ompl_simple_setup_->setGoal(goal);
   if (goal)
@@ -472,6 +481,7 @@ bool ompl_interface::ModelBasedPlanningContext::setGoalConstraints(
     return false;
 }
 
+// Run a benchmark (multiple planning runs) and save results
 bool ompl_interface::ModelBasedPlanningContext::benchmark(double timeout, unsigned int count,
                                                           const std::string& filename)
 {
@@ -480,7 +490,6 @@ bool ompl_interface::ModelBasedPlanningContext::benchmark(double timeout, unsign
   ompl_benchmark_.addPlanner(ompl_simple_setup_->getPlanner());
   ompl_benchmark_.setExperimentName(getRobotModel()->getName() + "_" + getGroupName() + "_" +
                                     getPlanningScene()->getName() + "_" + name_);
-
   ot::Benchmark::Request req;
   req.maxTime = timeout;
   req.runCount = count;
@@ -490,13 +499,13 @@ bool ompl_interface::ModelBasedPlanningContext::benchmark(double timeout, unsign
   return filename.empty() ? ompl_benchmark_.saveResultsToFile() : ompl_benchmark_.saveResultsToFile(filename.c_str());
 }
 
+// Start/stop goal sampling (for lazy goal sampling in OMPL)
 void ompl_interface::ModelBasedPlanningContext::startSampling()
 {
   bool gls = ompl_simple_setup_->getGoal()->hasType(ob::GOAL_LAZY_SAMPLES);
   if (gls)
     static_cast<ob::GoalLazySamples*>(ompl_simple_setup_->getGoal().get())->startSampling();
   else
-    // we know this is a GoalSampleableMux by elimination
     static_cast<GoalSampleableRegionMux*>(ompl_simple_setup_->getGoal().get())->startSampling();
 }
 
@@ -506,13 +515,12 @@ void ompl_interface::ModelBasedPlanningContext::stopSampling()
   if (gls)
     static_cast<ob::GoalLazySamples*>(ompl_simple_setup_->getGoal().get())->stopSampling();
   else
-    // we know this is a GoalSampleableMux by elimination
     static_cast<GoalSampleableRegionMux*>(ompl_simple_setup_->getGoal().get())->stopSampling();
 }
 
+// Prepare for solving (clear previous solutions, start sampling, reset counters)
 void ompl_interface::ModelBasedPlanningContext::preSolve()
 {
-  // clear previously computed solutions
   ompl_simple_setup_->getProblemDefinition()->clearSolutionPaths();
   const ob::PlannerPtr planner = ompl_simple_setup_->getPlanner();
   if (planner)
@@ -521,34 +529,26 @@ void ompl_interface::ModelBasedPlanningContext::preSolve()
   ompl_simple_setup_->getSpaceInformation()->getMotionValidator()->resetMotionCounter();
 }
 
+// Post-processing after solving (stop sampling, print stats)
 void ompl_interface::ModelBasedPlanningContext::postSolve()
 {
   stopSampling();
   int v = ompl_simple_setup_->getSpaceInformation()->getMotionValidator()->getValidMotionCount();
   int iv = ompl_simple_setup_->getSpaceInformation()->getMotionValidator()->getInvalidMotionCount();
   ROS_DEBUG_NAMED("model_based_planning_context", "There were %d valid motions and %d invalid motions.", v, iv);
-
   if (ompl_simple_setup_->getProblemDefinition()->hasApproximateSolution())
     ROS_WARN_NAMED("model_based_planning_context", "Computed solution is approximate");
 }
 
+// Solve the planning problem and fill a simple response
 bool ompl_interface::ModelBasedPlanningContext::solve(planning_interface::MotionPlanResponse& res)
 {
   if (solve(request_.allowed_planning_time, request_.num_planning_attempts))
   {
     double ptime = getLastPlanTime();
-    // if (simplify_solutions_)
-    // {
-      // simplifySolution(request_.allowed_planning_time - ptime);
-      // ptime += getLastSimplifyTime();
-    // }
-    // trying to take out interpolation to see if we can keep the same sparse path representation from mpnet
-    // interpolateSolution();
-
-    // fill the response
+    // Optionally simplify/interpolate solution here
     ROS_DEBUG_NAMED("model_based_planning_context", "%s: Returning successful solution with %lu states",
                     getName().c_str(), getOMPLSimpleSetup()->getSolutionPath().getStateCount());
-
     res.trajectory_.reset(new robot_trajectory::RobotTrajectory(getRobotModel(), getGroupName()));
     getSolutionPath(*res.trajectory_);
     res.planning_time_ = ptime;
@@ -562,40 +562,20 @@ bool ompl_interface::ModelBasedPlanningContext::solve(planning_interface::Motion
   }
 }
 
+// Solve the planning problem and fill a detailed response (with multiple trajectories, timings, etc.)
 bool ompl_interface::ModelBasedPlanningContext::solve(planning_interface::MotionPlanDetailedResponse& res)
 {
   if (solve(request_.allowed_planning_time, request_.num_planning_attempts))
   {
     res.trajectory_.reserve(3);
-
-    // add info about planned solution
+    // Add info about planned solution
     double ptime = getLastPlanTime();
     res.processing_time_.push_back(ptime);
     res.description_.push_back("plan");
     res.trajectory_.resize(res.trajectory_.size() + 1);
     res.trajectory_.back().reset(new robot_trajectory::RobotTrajectory(getRobotModel(), getGroupName()));
     getSolutionPath(*res.trajectory_.back());
-
-    // simplify solution if time remains
-    // if (simplify_solutions_)
-    // {
-    //   simplifySolution(request_.allowed_planning_time - ptime);
-    //   res.processing_time_.push_back(getLastSimplifyTime());
-    //   res.description_.push_back("simplify");
-    //   res.trajectory_.resize(res.trajectory_.size() + 1);
-    //   res.trajectory_.back().reset(new robot_trajectory::RobotTrajectory(getRobotModel(), getGroupName()));
-    //   getSolutionPath(*res.trajectory_.back());
-    // }
-
-    // ompl::time::point start_interpolate = ompl::time::now();
-    // interpolateSolution();
-    // res.processing_time_.push_back(ompl::time::seconds(ompl::time::now() - start_interpolate));
-    // res.description_.push_back("interpolate");
-    // res.trajectory_.resize(res.trajectory_.size() + 1);
-    // res.trajectory_.back().reset(new robot_trajectory::RobotTrajectory(getRobotModel(), getGroupName()));
-    // getSolutionPath(*res.trajectory_.back());
-
-    // fill the response
+    // Optionally simplify/interpolate solution here
     ROS_DEBUG_NAMED("model_based_planning_context", "%s: Returning successful solution with %lu states",
                     getName().c_str(), getOMPLSimpleSetup()->getSolutionPath().getStateCount());
     return true;
@@ -608,12 +588,12 @@ bool ompl_interface::ModelBasedPlanningContext::solve(planning_interface::Motion
   }
 }
 
+// Core solve function: runs the planner, possibly in parallel, and manages timing/termination
 bool ompl_interface::ModelBasedPlanningContext::solve(double timeout, unsigned int count)
 {
   moveit::tools::Profiler::ScopedBlock sblock("PlanningContext:Solve");
   ompl::time::point start = ompl::time::now();
   preSolve();
-
   bool result = false;
   if (count <= 1)
   {
@@ -639,7 +619,6 @@ bool ompl_interface::ModelBasedPlanningContext::solve(double timeout, unsigned i
       else
         for (unsigned int i = 0; i < count; ++i)
           ompl_parallel_plan_.addPlanner(ompl::tools::SelfConfig::getDefaultPlanner(ompl_simple_setup_->getGoal()));
-
       ob::PlannerTerminationCondition ptc =
           ob::timedPlannerTerminationCondition(timeout - ompl::time::seconds(ompl::time::now() - start));
       registerTerminationCondition(ptc);
@@ -683,12 +662,11 @@ bool ompl_interface::ModelBasedPlanningContext::solve(double timeout, unsigned i
       unregisterTerminationCondition();
     }
   }
-
   postSolve();
-
   return result;
 }
 
+// Register/unregister a planner termination condition (for timeouts, etc.)
 void ompl_interface::ModelBasedPlanningContext::registerTerminationCondition(const ob::PlannerTerminationCondition& ptc)
 {
   boost::mutex::scoped_lock slock(ptc_lock_);
@@ -701,6 +679,7 @@ void ompl_interface::ModelBasedPlanningContext::unregisterTerminationCondition()
   ptc_ = NULL;
 }
 
+// Terminate the planner if needed
 bool ompl_interface::ModelBasedPlanningContext::terminate()
 {
   boost::mutex::scoped_lock slock(ptc_lock_);

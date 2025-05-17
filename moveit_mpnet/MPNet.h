@@ -1,3 +1,14 @@
+/*
+The `MPNet.h` file defines the C++ class interface for the MPNet motion planner, which is a neural network-augmented 
+planner built on top of OMPL (Open Motion Planning Library). This header declares all the methods, parameters, and 
+data structures used by the MPNet planner, including configuration options (like goal bias, range, and various 
+sampling strategies), core planning routines, and utility functions for converting between different robot state 
+representations. It also exposes methods for integrating neural network inference (using PyTorch), handling path 
+feasibility checks, replanning, and optimizing paths. The class is designed to be flexible and extensible, supporting 
+advanced features like tree pruning, informed sampling, and batch-ordered sampling, making it suitable for 
+high-performance, learning-based motion planning in complex robotic environments.
+
+*/
 // #ifndef OMPL_GEOMETRIC_PLANNERS_RRT_RRTSTAR_
 // #define OMPL_GEOMETRIC_PLANNERS_RRT_RRTSTAR_
 

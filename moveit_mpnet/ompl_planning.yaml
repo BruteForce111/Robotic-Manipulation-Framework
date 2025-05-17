@@ -1,3 +1,12 @@
+# The ompl_planning.yaml file is a configuration file for the MoveIt! motion planning framework, 
+# specifically for setting up and customizing the behavior of different OMPL (Open Motion Planning Library) 
+# planners for various robot arms and groups. It defines multiple planner configurations—including both classical 
+# planners (like RRT, PRM, and EST) and the neural network-based MPNet planner—along with their parameters and 
+# optimization objectives. For each robot group (such as left_arm, right_arm, both_arms, etc.), it specifies which 
+# planners are available, which one is the default, and additional settings like projection evaluators and path 
+# resolution. This file allows users to easily switch between planners and fine-tune their behavior for different 
+# parts of the robot, enabling flexible and powerful motion planning experiments within the MoveIt!/OMPL ecosystem.
+
 planner_configs:
   SBLkConfigDefault:
     type: geometric::SBL

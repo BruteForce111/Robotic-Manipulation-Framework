@@ -1,3 +1,14 @@
+/*
+The MPNet.cpp file implements the core logic for the MPNet motion planner, a neural network-augmented planner 
+integrated with OMPL (Open Motion Planning Library) and designed for robotic arms like the Franka Emika. 
+This file defines how the planner uses a trained neural network (via PyTorch) to generate and optimize motion paths 
+in high-dimensional joint space, converting between Franka and MoveIt! state representations as needed. It handles 
+loading neural models, encoding obstacles, generating start/goal tensors, and running the neural network to propose 
+feasible paths. The planner also includes routines for path feasibility checking, path contraction, and fallback 
+replanning if the neural solution is not immediately feasible. By combining learned models with traditional 
+sampling-based planning infrastructure, this file enables fast, robust, and flexible motion planning in complex 
+environments.
+*/
 // #include "ompl/geometric/planners/rrt/RRTstar.h"
 #include "ompl/geometric/planners/mpnet/MPNet.h"
 #include <algorithm>

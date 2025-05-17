@@ -1,3 +1,13 @@
+/*
+The planning_context_manager.cpp file implements the logic for managing and instantiating planning contexts within 
+the MoveIt! motion planning framework, specifically when using OMPL (Open Motion Planning Library) as the backend. 
+It is responsible for registering available planners (including both classical planners like RRT, PRM, and the neural
+MPNet planner), managing state space representations, and efficiently creating or reusing planning contexts for 
+different robot groups and planning requests. The file also handles caching of planning contexts for performance, 
+selecting the appropriate planner and state space based on user configuration, and setting up the planning environment 
+with the correct parameters and constraints. This management layer is crucial for enabling flexible, efficient, and 
+modular motion planning in complex robotic systems using MoveIt! and OMPL.
+*/
 #include <moveit/ompl_interface/planning_context_manager.h>
 #include <moveit/robot_state/conversions.h>
 #include <moveit/profiler/profiler.h>
