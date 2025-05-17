@@ -27,12 +27,12 @@ void ompl::geometric::MPNet::testJointRange(){
     si_->printSettings();
     std::cout << "\n\n\n";
 
-    const float baxterJointRange[7] = {3.4033, 3.194, 6.117, 3.6647, 6.117, 6.1083, 2.67};
+    const float frankaJointRange[7] = {3.4033, 3.194, 6.117, 3.6647, 6.117, 6.1083, 2.67};
     
-    const int dim = sizeof(baxterJointRange) / sizeof(baxterJointRange[0]);
+    const int dim = sizeof(frankaJointRange) / sizeof(frankaJointRange[0]);
     for (int i = 0; i < dim; i++)
     {
-        std::cout << baxterJointRange[i] << "  ";
+        std::cout << frankaJointRange[i] << "  ";
     }
     std::cout << "\n\n\n";
 }
@@ -53,82 +53,82 @@ torch::Tensor ompl::geometric::MPNet::loadNormalizedPointCloud(std::string fname
     return torch_tensor;
 }
 
-void ompl::geometric::MPNet::baxterToMoveIt(torch::Tensor baxter_state_tensor, ompl::base::State *moveit_state){
+void ompl::geometric::MPNet::frankaToMoveIt(torch::Tensor franka_state_tensor, ompl::base::State *moveit_state){
     //swap indices    
-    auto tensor_a = baxter_state_tensor.accessor<float,2>(); //accessor for the tensor
-    std::vector<double> baxter_state_vec;
+    auto tensor_a = franka_state_tensor.accessor<float,2>(); //accessor for the tensor
+    std::vector<double> franka_state_vec;
 
     for (int i = 0; i < tensor_a.size(1); i++){
-        baxter_state_vec.push_back((double)tensor_a[0][i]);
+        franka_state_vec.push_back((double)tensor_a[0][i]);
     }
 
-    moveit_state->as<ompl::base::RealVectorStateSpace::StateType>()->values[0] = baxter_state_vec[0];
-    moveit_state->as<ompl::base::RealVectorStateSpace::StateType>()->values[1] = baxter_state_vec[1];
+    moveit_state->as<ompl::base::RealVectorStateSpace::StateType>()->values[0] = franka_state_vec[0];
+    moveit_state->as<ompl::base::RealVectorStateSpace::StateType>()->values[1] = franka_state_vec[1];
 
-    moveit_state->as<ompl::base::RealVectorStateSpace::StateType>()->values[2] = baxter_state_vec[5];
-    moveit_state->as<ompl::base::RealVectorStateSpace::StateType>()->values[3] = baxter_state_vec[6];
+    moveit_state->as<ompl::base::RealVectorStateSpace::StateType>()->values[2] = franka_state_vec[5];
+    moveit_state->as<ompl::base::RealVectorStateSpace::StateType>()->values[3] = franka_state_vec[6];
 
-    moveit_state->as<ompl::base::RealVectorStateSpace::StateType>()->values[4] = baxter_state_vec[2];
-    moveit_state->as<ompl::base::RealVectorStateSpace::StateType>()->values[5] = baxter_state_vec[3];
-    moveit_state->as<ompl::base::RealVectorStateSpace::StateType>()->values[6] = baxter_state_vec[4];
+    moveit_state->as<ompl::base::RealVectorStateSpace::StateType>()->values[4] = franka_state_vec[2];
+    moveit_state->as<ompl::base::RealVectorStateSpace::StateType>()->values[5] = franka_state_vec[3];
+    moveit_state->as<ompl::base::RealVectorStateSpace::StateType>()->values[6] = franka_state_vec[4];
 
     #ifdef DEBUG 
-        std::cout << "Baxter state: \n" << baxter_state_vec << "\nMoveit State: \n";
+        std::cout << "Franka state: \n" << franka_state_vec << "\nMoveit State: \n";
         si_->printState(moveit_state);
     #endif
 }
 
-void ompl::geometric::MPNet::baxterToMoveItAndUnnormalize(torch::Tensor baxter_state_tensor, ompl::base::State *moveit_state, const float jointRange[], int dim){
-    auto tensor_a = baxter_state_tensor.accessor<float,2>(); //accessor for the tensor
+void ompl::geometric::MPNet::frankaToMoveItAndUnnormalize(torch::Tensor franka_state_tensor, ompl::base::State *moveit_state, const float jointRange[], int dim){
+    auto tensor_a = franka_state_tensor.accessor<float,2>(); //accessor for the tensor
 
-    std::vector<double> baxter_state_vec;
+    std::vector<double> franka_state_vec;
     for (int i = 0; i < dim; i++){
-        baxter_state_vec.push_back((double)(tensor_a[0][i] * jointRange[i]));
+        franka_state_vec.push_back((double)(tensor_a[0][i] * jointRange[i]));
     }
 
-    moveit_state->as<ompl::base::RealVectorStateSpace::StateType>()->values[0] = baxter_state_vec[0];
-    moveit_state->as<ompl::base::RealVectorStateSpace::StateType>()->values[1] = baxter_state_vec[1];
+    moveit_state->as<ompl::base::RealVectorStateSpace::StateType>()->values[0] = franka_state_vec[0];
+    moveit_state->as<ompl::base::RealVectorStateSpace::StateType>()->values[1] = franka_state_vec[1];
 
-    moveit_state->as<ompl::base::RealVectorStateSpace::StateType>()->values[2] = baxter_state_vec[5];
-    moveit_state->as<ompl::base::RealVectorStateSpace::StateType>()->values[3] = baxter_state_vec[6];
+    moveit_state->as<ompl::base::RealVectorStateSpace::StateType>()->values[2] = franka_state_vec[5];
+    moveit_state->as<ompl::base::RealVectorStateSpace::StateType>()->values[3] = franka_state_vec[6];
 
-    moveit_state->as<ompl::base::RealVectorStateSpace::StateType>()->values[4] = baxter_state_vec[2];
-    moveit_state->as<ompl::base::RealVectorStateSpace::StateType>()->values[5] = baxter_state_vec[3];
-    moveit_state->as<ompl::base::RealVectorStateSpace::StateType>()->values[6] = baxter_state_vec[4];
+    moveit_state->as<ompl::base::RealVectorStateSpace::StateType>()->values[4] = franka_state_vec[2];
+    moveit_state->as<ompl::base::RealVectorStateSpace::StateType>()->values[5] = franka_state_vec[3];
+    moveit_state->as<ompl::base::RealVectorStateSpace::StateType>()->values[6] = franka_state_vec[4];
 
 
     #ifdef DEBUG
-        std::cout << "Baxter state: \n"
-                << baxter_state_vec << "\nMoveit State: \n";
+        std::cout << "Franka state: \n"
+                << franka_state_vec << "\nMoveit State: \n";
         si_->printState(moveit_state);
     #endif   
 }
 
-std::vector<float> ompl::geometric::MPNet::moveItToBaxter(std::vector<float> moveit_state_vector)
+std::vector<float> ompl::geometric::MPNet::moveItToFranka(std::vector<float> moveit_state_vector)
 {
-    std::vector<float> baxter_state_vector;
+    std::vector<float> franka_state_vector;
 
     for (uint i = 0; i < moveit_state_vector.size(); i++)
-        baxter_state_vector.push_back(moveit_state_vector[i]);
+        franka_state_vector.push_back(moveit_state_vector[i]);
 
-    baxter_state_vector[0] = moveit_state_vector[0];
-    baxter_state_vector[1] = moveit_state_vector[1];
+    franka_state_vector[0] = moveit_state_vector[0];
+    franka_state_vector[1] = moveit_state_vector[1];
 
-    baxter_state_vector[2] = moveit_state_vector[4];
-    baxter_state_vector[3] = moveit_state_vector[5];
-    baxter_state_vector[4] = moveit_state_vector[6];
+    franka_state_vector[2] = moveit_state_vector[4];
+    franka_state_vector[3] = moveit_state_vector[5];
+    franka_state_vector[4] = moveit_state_vector[6];
 
-    baxter_state_vector[5] = moveit_state_vector[2];
-    baxter_state_vector[6] = moveit_state_vector[3];
+    franka_state_vector[5] = moveit_state_vector[2];
+    franka_state_vector[6] = moveit_state_vector[3];
 
-    torch::Tensor baxter_state_tensor = torch::from_blob(baxter_state_vector.data(), {1, (int)(baxter_state_vector.size())});
+    torch::Tensor franka_state_tensor = torch::from_blob(franka_state_vector.data(), {1, (int)(franka_state_vector.size())});
 
     #ifdef DEBUG
         std::cout << "Moveit: \n" << moveit_state_vector 
-                << "\n Baxter: \n" << baxter_state_vector << "\n";
+                << "\n Franka: \n" << franka_state_vector << "\n";
     #endif
 
-    return baxter_state_vector;
+    return franka_state_vector;
 }
 
 std::vector<float> ompl::geometric::MPNet::normalizeVector(std::vector<float> unnormalized_vec, const float jointRange[])
@@ -143,29 +143,29 @@ std::vector<float> ompl::geometric::MPNet::normalizeVector(std::vector<float> un
     return normalized_vec;
 }
 
-std::vector<float> ompl::geometric::MPNet::moveItToBaxterAndNormalize(std::vector<float> moveit_state_vector, const float jointRange[], int dim)
+std::vector<float> ompl::geometric::MPNet::moveItToFrankaAndNormalize(std::vector<float> moveit_state_vector, const float jointRange[], int dim)
 {
-    std::vector<float> baxter_state_vector;
+    std::vector<float> franka_state_vector;
 
     for (int i = 0; i < dim; i++)
-        baxter_state_vector.push_back(moveit_state_vector[i]);
+        franka_state_vector.push_back(moveit_state_vector[i]);
 
-    baxter_state_vector[0] = moveit_state_vector[0];
-    baxter_state_vector[1] = moveit_state_vector[1];
+    franka_state_vector[0] = moveit_state_vector[0];
+    franka_state_vector[1] = moveit_state_vector[1];
 
-    baxter_state_vector[2] = moveit_state_vector[4];
-    baxter_state_vector[3] = moveit_state_vector[5];
-    baxter_state_vector[4] = moveit_state_vector[6];
+    franka_state_vector[2] = moveit_state_vector[4];
+    franka_state_vector[3] = moveit_state_vector[5];
+    franka_state_vector[4] = moveit_state_vector[6];
 
-    baxter_state_vector[5] = moveit_state_vector[2];
-    baxter_state_vector[6] = moveit_state_vector[3];
+    franka_state_vector[5] = moveit_state_vector[2];
+    franka_state_vector[6] = moveit_state_vector[3];
 
     for (int i = 0; i < dim; i++)
     {
-        baxter_state_vector[i] = baxter_state_vector[i] / jointRange[i];
+        franka_state_vector[i] = franka_state_vector[i] / jointRange[i];
     }
 
-    return baxter_state_vector;
+    return franka_state_vector;
 }
 
 at::Tensor ompl::geometric::MPNet::getEncoding(){
@@ -208,8 +208,8 @@ torch::Tensor ompl::geometric::MPNet::getStartGoalTensor(ompl::base::State *star
     }
 
 
-    std::vector<float> normalized_start_vec = moveItToBaxterAndNormalize(start_vec, jointRange, dim);
-    std::vector<float> normalized_goal_vec = moveItToBaxterAndNormalize(goal_vec, jointRange, dim);
+    std::vector<float> normalized_start_vec = moveItToFrankaAndNormalize(start_vec, jointRange, dim);
+    std::vector<float> normalized_goal_vec = moveItToFrankaAndNormalize(goal_vec, jointRange, dim);
 
     torch::Tensor start_tensor = torch::from_blob(normalized_start_vec.data(), {1, dim});
     torch::Tensor goal_tensor = torch::from_blob(normalized_goal_vec.data(), {1, dim});
@@ -253,8 +253,8 @@ torch::Tensor ompl::geometric::MPNet::getStartStartTensor(ompl::base::State *sta
         goal_vec.push_back((float)goal_state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);
         start_vec.push_back((float)start_state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);
     }
-    std::vector<float> normalized_start_vec = moveItToBaxterAndNormalize(start_vec, jointRange, dim);
-    std::vector<float> normalized_goal_vec = moveItToBaxterAndNormalize(goal_vec, jointRange, dim);
+    std::vector<float> normalized_start_vec = moveItToFrankaAndNormalize(start_vec, jointRange, dim);
+    std::vector<float> normalized_goal_vec = moveItToFrankaAndNormalize(goal_vec, jointRange, dim);
 
     torch::Tensor start_tensor = torch::from_blob(normalized_start_vec.data(), {1, dim});
     torch::Tensor goal_tensor = torch::from_blob(normalized_goal_vec.data(), {1, dim});
@@ -466,8 +466,8 @@ std::vector<ompl::base::State *> ompl::geometric::MPNet::replanPath(std::vector<
 
             base::State *start1_state = si_->allocState();
             base::State *start2_state = si_->allocState();
-            baxterToMoveItAndUnnormalize(start_tens, start1_state, jointRange, dim);
-            baxterToMoveItAndUnnormalize(goal_tens, start2_state, jointRange, dim);
+            frankaToMoveItAndUnnormalize(start_tens, start1_state, jointRange, dim);
+            frankaToMoveItAndUnnormalize(goal_tens, start2_state, jointRange, dim);
 
             std::vector<base::State *> pA;
             std::vector<base::State *> pB;
@@ -494,7 +494,7 @@ std::vector<ompl::base::State *> ompl::geometric::MPNet::replanPath(std::vector<
                     // forward pass and convert to OMPL state
                     start_tens = MLP->forward(mlp_input_1).toTensor().to(at::kCPU);
                     base::State *new_state_1 = si_->allocState();
-                    baxterToMoveItAndUnnormalize(start_tens, new_state_1, jointRange, dim);
+                    frankaToMoveItAndUnnormalize(start_tens, new_state_1, jointRange, dim);
 
                     // append path
                     pA.push_back(new_state_1);
@@ -515,7 +515,7 @@ std::vector<ompl::base::State *> ompl::geometric::MPNet::replanPath(std::vector<
                     // forward pass and convert to OMPL state
                     goal_tens = MLP->forward(mlp_input_2).toTensor().to(at::kCPU);
                     base::State *new_state_2 = si_->allocState();
-                    baxterToMoveItAndUnnormalize(goal_tens, new_state_2, jointRange, dim);
+                    frankaToMoveItAndUnnormalize(goal_tens, new_state_2, jointRange, dim);
 
                     // append path
                     pB.push_back(new_state_2);
@@ -551,7 +551,7 @@ std::vector<ompl::base::State *> ompl::geometric::MPNet::MPNetSolve()
 {
 
     int dim = si_->getStateDimension();
-    const float baxterJointRange[7] = {3.4033, 3.194, 6.117, 3.6647, 6.117, 6.1083, 2.67};
+    const float frankaJointRange[7] = {3.4033, 3.194, 6.117, 3.6647, 6.117, 6.1083, 2.67};
 
     // get obstacle encoding
     at::Tensor obs_enc = getEncoding();
@@ -567,8 +567,8 @@ std::vector<ompl::base::State *> ompl::geometric::MPNet::MPNetSolve()
 
     // get start, goal in tensor form
     bool start_first = true;
-    torch::Tensor sg = getStartGoalTensor(start_state, goal_state, start_first, baxterJointRange, dim);
-    torch::Tensor gs = getStartGoalTensor(start_state, goal_state, !start_first, baxterJointRange, dim);
+    torch::Tensor sg = getStartGoalTensor(start_state, goal_state, start_first, frankaJointRange, dim);
+    torch::Tensor gs = getStartGoalTensor(start_state, goal_state, !start_first, frankaJointRange, dim);
 
     torch::Tensor start_only = sg.narrow(1, 0, 7);
     torch::Tensor goal_only = sg.narrow(1, 7, 7);
@@ -617,7 +617,7 @@ std::vector<ompl::base::State *> ompl::geometric::MPNet::MPNetSolve()
             start1 = mlp_output.toTensor().to(at::kCPU);
 
             base::State *new_state_1 = si_->allocState();
-            baxterToMoveItAndUnnormalize(start1, new_state_1, baxterJointRange, dim);
+            frankaToMoveItAndUnnormalize(start1, new_state_1, frankaJointRange, dim);
 
             // append path 
             path1.push_back(new_state_1);
@@ -638,7 +638,7 @@ std::vector<ompl::base::State *> ompl::geometric::MPNet::MPNetSolve()
             // forward pass and convert to OMPL state
             start2 = MLP->forward(mlp_input_2).toTensor().to(at::kCPU);
             base::State *new_state_2 = si_->allocState();
-            baxterToMoveItAndUnnormalize(start2, new_state_2, baxterJointRange, dim);
+            frankaToMoveItAndUnnormalize(start2, new_state_2, frankaJointRange, dim);
 
             // append path 
             path2.push_back(new_state_2);
@@ -713,7 +713,7 @@ std::vector<ompl::base::State *> ompl::geometric::MPNet::MPNetSolve()
             si_->setStateValidityCheckingResolution(step_size);
 
             sp = sp + 1;
-            path = replanPath(path, goal_state, MLP, obs_enc, baxterJointRange, dim);
+            path = replanPath(path, goal_state, MLP, obs_enc, frankaJointRange, dim);
 
             if (path.size() > 0){
 
@@ -831,8 +831,8 @@ void ompl::geometric::MPNet::setup()
     // Calculate some constants:
     calculateRewiringLowerBounds();
 
-    // baxterJointRange = {3.4033, 3.194, 6.1083, 2.67, 6.117, 3.6647, 6.117};
-    // setBaxterJointRange();
+    // frankaJointRange = {3.4033, 3.194, 6.1083, 2.67, 6.117, 3.6647, 6.117};
+    // setFrankaJointRange();
 }
 
 void ompl::geometric::MPNet::clear()

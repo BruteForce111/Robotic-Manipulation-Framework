@@ -19,6 +19,6 @@ docker run -it \
     --volume="$XAUTH:$XAUTH" \
     --runtime=nvidia \
     -v $PWD/mpnet_data:/mpnet_data/ \
-    -v $PWD/experiment_data:/root/catkin_ws/src/baxter_moveit_experiments/data/ \
-    baxter-mpnet-ompl \
+    -v $PWD/experiment_data:/root/catkin_ws/src/franka_moveit_experiments/data/ \
+    franka-mpnet-ompl \
     bash

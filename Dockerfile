@@ -21,7 +21,7 @@ RUN apt-get update && apt-get install -y  \
   ros-kinetic-ros-core=1.3.2-0* \
   && rm -rf /var/lib/apt/lists/*
 
-# Install packages for Baxter base  
+# Install packages for Franka base  
 RUN apt-get update && apt-get install -y  \
   git-core \
   python-argparse \
@@ -85,9 +85,9 @@ RUN catkin init
 RUN catkin config --extend /opt/ros/$ROS_DISTRO --cmake-args -DCMAKE_BUILD_TYPE=Release 
 WORKDIR $CATKIN_WS/src
 
-# Download the baxter core files
+# Download the franka core files
 RUN wstool init . \
-  && wstool merge https://raw.githubusercontent.com/RethinkRobotics/baxter/master/baxter_sdk.rosinstall \
+  && wstool merge https://raw.githubusercontent.com/RethinkRobotics/franka/master/franka_sdk.rosinstall \
   && wstool update
 
 WORKDIR $CATKIN_WS
@@ -98,7 +98,7 @@ RUN source devel/setup.bash
 WORKDIR ${CATKIN_WS}/src
 
 # Download the simulation files
-RUN git clone -b kinetic-devel https://github.com/RethinkRobotics/baxter_simulator.git # get the regular simulator
+RUN git clone -b kinetic-devel https://github.com/RethinkRobotics/franka_simulator.git # get the regular simulator
 
 WORKDIR $CATKIN_WS
 RUN catkin build
@@ -131,13 +131,13 @@ RUN source devel/setup.bash
 
 WORKDIR ${CATKIN_WS}/src
 
-# Download and install Baxter MoveIt
+# Download and install Franka MoveIt
 RUN git clone https://github.com/ros-planning/moveit_robots.git
 
-# Download the baxter_moveit_experiments repository which has some of the key launch file capability, 
+# Download the franka_moveit_experiments repository which has some of the key launch file capability, 
 # and copy in local version of python script which has some necessary changes for MPNet experiment to run
-RUN git clone https://github.com/anthonysimeonov/baxter_moveit_experiments.git
-COPY ./motion_planning_data_gen.py ${CATKIN_WS}/src/baxter_moveit_experiments/
+RUN git clone https://github.com/anthonysimeonov/franka_moveit_experiments.git
+COPY ./motion_planning_data_gen.py ${CATKIN_WS}/src/franka_moveit_experiments/
 
 # Python package dependencies
 RUN pip install --upgrade setuptools
@@ -174,8 +174,8 @@ RUN catkin clean -y
 RUN catkin build
 RUN source devel/setup.bash
 
-# Copy in the moveit and baxter_moveit source code to register a new planner, and to turn off simplify solutions/interpolation
-COPY ./moveit_mpnet/ompl_planning.yaml ${CATKIN_WS}/src/moveit_robots/baxter/baxter_moveit_config/config/
+# Copy in the moveit and franka_moveit source code to register a new planner, and to turn off simplify solutions/interpolation
+COPY ./moveit_mpnet/ompl_planning.yaml ${CATKIN_WS}/src/moveit_robots/franka/franka_moveit_config/config/
 COPY ./moveit_mpnet/planning_context_manager.cpp ${CATKIN_WS}/src/${OMPL_INTERFACE}/ompl_interface/src/
 COPY ./moveit_mpnet/model_based_planning_context.cpp ${CATKIN_WS}/src/${OMPL_INTERFACE}/ompl_interface/src/
 
